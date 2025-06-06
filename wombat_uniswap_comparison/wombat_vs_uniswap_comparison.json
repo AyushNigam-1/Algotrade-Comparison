@@ -1,0 +1,82 @@
+{
+  "Liquidity Fragmentation": {
+    "Explanation": "Liquidity fragmentation refers to how capital is distributed across the pool's price range. Wombat uses dynamic rebalancing to maintain even coverage, while Uniswap splits liquidity across price ranges due to x*y=k model.",
+    "Wombat": {
+      "Coverage Ratios (Mean)": {
+        "BTC": 1.1702557963326077,
+        "ETH": 0.8409638237723057,
+        "USDT": 1.0231165802765179
+      },
+      "Dynamic Rebalancing": true,
+      "Fragmentation Control": "Adaptive via coverage ratio + repegging",
+      "Liquidity Range": "Wide, dynamically adjusted"
+    },
+    "Uniswap": {
+      "Coverage Ratios": {
+        "BTC": 1.0,
+        "ETH": 1.0,
+        "USDT": 1.0
+      },
+      "Dynamic Rebalancing": false,
+      "Fragmentation Control": "None (constant product formula)",
+      "Liquidity Range": "Fixed range, no self-adjustment"
+    },
+    "Winner": "Wombat \u2013 better capital spread and dynamic response to price"
+  },
+  "Computation Cost (Gas / Smart Contract Load)": {
+    "Explanation": "Computation cost includes operation count (proxy for gas) and how much state data is fetched/updated in each transaction. Wombat\u2019s dynamic operations increase cost but provide tighter peg.",
+    "Wombat": {
+      "Operation Counters": {
+        "swap_quote": 426383,
+        "calculate_fee": 426383,
+        "tweak_price": 426383,
+        "repeg": 1277
+      },
+      "State Data Accessed": "Coverage ratios, fee multipliers, price tweaks, rebase targets",
+      "Complexity": "High \u2013 several real-time adjustments per swap",
+      "Gas Optimization": "Partially optimized, multi-step"
+    },
+    "Uniswap": {
+      "Operation Counters": {
+        "swap_quote": "~1",
+        "calculate_fee": "0.3% fee per swap",
+        "tweak_price": "N/A",
+        "repeg": "Not supported"
+      },
+      "State Data Accessed": "Token reserves (x, y), swap fee",
+      "Complexity": "Low \u2013 constant function only",
+      "Gas Optimization": "Highly gas efficient, simple swap logic"
+    },
+    "Winner": "Uniswap \u2013 much simpler and gas efficient"
+  },
+  "Capital Efficiency": {
+    "Explanation": "Capital efficiency measures how well liquidity earns yield with minimal slippage and loss. Wombat mitigates impermanent loss via repeg and smoother pricing.",
+    "Wombat": {
+      "LP APY": {
+        "BTC": 0.0018,
+        "ETH": 0.0028,
+        "USDT": 0.0081
+      },
+      "Impermanent Loss Mitigation": "Yes \u2013 via dynamic coverage, smoothing, repeg",
+      "Slippage": "Low \u2013 Oracle pegged, smoother curve"
+    },
+    "Uniswap": {
+      "LP APY": {
+        "BTC": 152.43199772362735,
+        "ETH": 125.0697072211336,
+        "USDT": 100.17063073708539
+      },
+      "Impermanent Loss %": {
+        "BTC": -2.6183045890436962,
+        "ETH": -0.5650625435351553,
+        "USDT": -9.266406519881087e-06
+      },
+      "Slippage": {
+        "BTC": 0.023571767597916276,
+        "ETH": 0.05269531961927564,
+        "USDT": 0.004827238074993281
+      }
+    },
+    "Winner": "Wombat \u2013 better IL protection and lower slippage overall"
+  }
+}

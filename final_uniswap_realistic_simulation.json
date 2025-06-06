@@ -1,0 +1,31 @@
+{
+  "UniswapV2": {
+    "BTC": {
+      "LP Final Value": 919000770.6476448,
+      "HODL Final Value": 364058748.0727398,
+      "Impermanent Loss %": -2.6183045890436962,
+      "Relative LP Gain %": 152.43199772362735,
+      "Average Slippage": 0.023571767597916276,
+      "Total Volume": 197092738.58973366,
+      "Total Fees Collected": 575401.4739077154
+    },
+    "ETH": {
+      "LP Final Value": 50499956.71031925,
+      "HODL Final Value": 22437473.85369034,
+      "Impermanent Loss %": -0.5650625435351553,
+      "Relative LP Gain %": 125.0697072211336,
+      "Average Slippage": 0.05269531961927564,
+      "Total Volume": 13678113.391926289,
+      "Total Fees Collected": 39595.90943701747
+    },
+    "USDT": {
+      "LP Final Value": 20209.575061453812,
+      "HODL Final Value": 10096.173942718964,
+      "Impermanent Loss %": -9.266406519881087e-06,
+      "Relative LP Gain %": 100.17063073708539,
+      "Average Slippage": 0.004827238074993281,
+      "Total Volume": 2764.172138395764,
+      "Total Fees Collected": 8.25651031296104
+    }
+  }
+}
