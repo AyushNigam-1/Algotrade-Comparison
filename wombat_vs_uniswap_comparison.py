@@ -16,6 +16,12 @@ with open("final_uniswap_realistic_simulation.json") as f:
 
 # Compute average coverage ratios for Wombat
 avg_coverage_ratios = {token: float(np.mean(vals)) for token, vals in wombat_data["coverage_ratio"].items()}
+avg_wombat_slippage = {
+    token: float(np.mean(vals)) for token, vals in wombat_data["slippage"].items()
+}
+avg_wombat_il = {
+    token: float(np.mean(vals)) for token, vals in wombat_data["impermanent_loss_percent"].items()
+}
 
 # Prepare comparison summary
 comparison = {
@@ -59,10 +65,12 @@ comparison = {
     "Capital Efficiency": {
         "Explanation": "Capital efficiency measures how well liquidity earns yield with minimal slippage and loss. Wombat mitigates impermanent loss via repeg and smoother pricing.",
         "Wombat": {
-            "LP APY": wombat_data["apy_lp"],
-            "Impermanent Loss Mitigation": "Yes – via dynamic coverage, smoothing, repeg",
-            "Slippage": "Low – Oracle pegged, smoother curve"
-        },
+        "LP APY": wombat_data["apy_lp"],
+        "Impermanent Loss % (Avg)": avg_wombat_il,
+        "Slippage (Avg)": avg_wombat_slippage,
+        "Impermanent Loss Mitigation": "Yes – via dynamic coverage, smoothing, repeg",
+        "Slippage Model": "Low – Oracle pegged, smoother curve"
+    },
         "Uniswap": {
             "LP APY": {
                 "BTC": uniswap_data["BTC"]["Relative LP Gain %"],

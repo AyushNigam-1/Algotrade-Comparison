@@ -20,8 +20,7 @@
       "Dynamic Rebalancing": false,
       "Fragmentation Control": "None (constant product formula)",
       "Liquidity Range": "Fixed range, no self-adjustment"
-    },
-    "Winner": "Wombat \u2013 better capital spread and dynamic response to price"
+    }
   },
   "Computation Cost (Gas / Smart Contract Load)": {
     "Explanation": "Computation cost includes operation count (proxy for gas) and how much state data is fetched/updated in each transaction. Wombat\u2019s dynamic operations increase cost but provide tighter peg.",
@@ -46,8 +45,7 @@
       "State Data Accessed": "Token reserves (x, y), swap fee",
       "Complexity": "Low \u2013 constant function only",
       "Gas Optimization": "Highly gas efficient, simple swap logic"
-    },
-    "Winner": "Uniswap \u2013 much simpler and gas efficient"
+    }
   },
   "Capital Efficiency": {
     "Explanation": "Capital efficiency measures how well liquidity earns yield with minimal slippage and loss. Wombat mitigates impermanent loss via repeg and smoother pricing.",
@@ -57,26 +55,35 @@
         "ETH": 0.0028,
         "USDT": 0.0081
       },
+      "Impermanent Loss % (Avg)": {
+        "BTC": -0.011231265303534223,
+        "ETH": -0.17951554180030288,
+        "USDT": -0.18293494518808026
+      },
+      "Slippage (Avg)": {
+        "BTC": 0.1837109727014048,
+        "ETH": 0.23624149133654843,
+        "USDT": 0.0
+      },
       "Impermanent Loss Mitigation": "Yes \u2013 via dynamic coverage, smoothing, repeg",
-      "Slippage": "Low \u2013 Oracle pegged, smoother curve"
+      "Slippage Model": "Low \u2013 Oracle pegged, smoother curve"
     },
     "Uniswap": {
       "LP APY": {
-        "BTC": 152.43199772362735,
-        "ETH": 125.0697072211336,
-        "USDT": 100.17063073708539
+        "BTC": -67.43911588879908,
+        "ETH": 20.280925285636616,
+        "USDT": 99.9983119388723
       },
       "Impermanent Loss %": {
-        "BTC": -2.6183045890436962,
-        "ETH": -0.5650625435351553,
-        "USDT": -9.266406519881087e-06
+        "BTC": -2.0670815053423497,
+        "ETH": -0.002310371978553327,
+        "USDT": -1.0558220964185239e-08
       },
       "Slippage": {
-        "BTC": 0.023571767597916276,
-        "ETH": 0.05269531961927564,
-        "USDT": 0.004827238074993281
+        "BTC": 0.03676454561903484,
+        "ETH": 0.010086953739931046,
+        "USDT": 0.0
       }
-    },
-    "Winner": "Wombat \u2013 better IL protection and lower slippage overall"
+    }
   }
 }

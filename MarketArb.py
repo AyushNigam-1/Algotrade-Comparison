@@ -100,6 +100,9 @@ Mary.deposit(Trinity, BTC, init_pool_liquidity_btc, ETH, USDT)
 Mary.deposit(Trinity, ETH, init_pool_liquidity_eth, BTC, USDT)
 Mary.deposit(Trinity, USDT, init_pool_liquidity_stable, BTC, ETH)
 
+impermanent_loss_btc = []
+impermanent_loss_eth = []
+impermanent_loss_usdt = []
 
 def arb_bot(
     first_token,
@@ -306,135 +309,108 @@ def arb_bot(
 def historic_arbs_new(
     target_token, other_token1, other_token2, btc_price_cex, eth_price_cex
 ):
+    import numpy as np
+    import random
+
     inf = 1e10
-    others_percentage = (
-        0.2
-    )
-    deposit_amount = (
-        target_token.cash * others_percentage
-    )
+    others_percentage = 0.2
+    deposit_amount = target_token.cash * others_percentage
     Others.deposit(Trinity, target_token, deposit_amount, other_token1, other_token2)
 
     btc_price_cex_trimmed = btc_price_cex[:500]
     eth_price_cex_trimmed = eth_price_cex[:500]
+    n = len(btc_price_cex_trimmed)
 
-    BTC.price_last_average_records = [1e10] * len(btc_price_cex_trimmed)
-    ETH.price_last_average_records = [1e10] * len(btc_price_cex_trimmed)
-    USDT.price_last_average_records = [1e10] * len(btc_price_cex_trimmed)
-    BTC.volume_hourly_records = [1e10] * len(btc_price_cex_trimmed)
-    ETH.volume_hourly_records = [1e10] * len(btc_price_cex_trimmed)
-    USDT.volume_hourly_records = [1e10] * len(btc_price_cex_trimmed)
+    for token in [BTC, ETH, USDT]:
+        token.price_last_average_records = [1e10] * n
+        token.volume_hourly_records = [1e10] * n
+        token.price_last_dict_records = [[] for _ in range(n)]
+        token.volume_dict_records = [[] for _ in range(n)]
+        token.hf_lp_records = getattr(token, 'hf_lp_records', 0)
 
-    print("-- Start of the swap --")
     impermanent_loss = []
     impermanent_loss_percent = []
     uniswapv2_impermanent_loss_percent = []
     hodl_value = []
     lp_value = []
+    ema_t_dict = {}
     cex_count = 0
     random.seed(1234)
     tolerance = 5
 
-    btc_amm_hourly = []
-    eth_amm_hourly = []
-    btc_oracle_hourly = []
-    btc_scale_hourly = []
-    btc_scale_new_hourly = []
-    eth_oracle_hourly = []
-    eth_scale_hourly = []
-    eth_scale_new_hourly = []
+    btc_amm_hourly, eth_amm_hourly = [], []
+    btc_oracle_hourly, eth_oracle_hourly = [], []
+    btc_scale_hourly, eth_scale_hourly = [], []
+    btc_scale_new_hourly, eth_scale_new_hourly = [], []
     r_star_repeg = []
-    ema_t_dict = {}
-    btc_fee_rate = []
-    btc_cov_ratio = []
-    btc_sigma = []
-    btc_utilization = []
-    eth_fee_rate = []
-    eth_cov_ratio = []
-    usdt_fee_rate = []
-    usdt_cov_ratio = []
 
-    # New lists for slippage % calculation
-    btc_slippage_hourly = []
-    eth_slippage_hourly = []
-    usdt_slippage_hourly = []
+    btc_fee_rate, eth_fee_rate, usdt_fee_rate = [], [], []
+    btc_cov_ratio, eth_cov_ratio, usdt_cov_ratio = [], [], []
+    btc_sigma, btc_utilization = [], []
 
-    for t in range(len(btc_price_cex_trimmed)):
-        BTC.price_last_dict_records[t] = []
-        ETH.price_last_dict_records[t] = []
+    btc_slippage_hourly, eth_slippage_hourly, usdt_slippage_hourly = [], [], []
+    impermanent_loss_btc, impermanent_loss_eth, impermanent_loss_usdt = [], [], []
 
-        BTC.volume_dict_records[t] = []
-        ETH.volume_dict_records[t] = []
-        USDT.volume_dict_records[t] = []
+    btc_initial_liability = BTC.liability or 1
+    eth_initial_liability = ETH.liability or 1
+    usdt_initial_liability = USDT.liability or 1
+
+    for t in range(n):
         ema_t_dict[t] = []
 
         u = random.randint(0, 1)
-        if single_token == True:
+        if single_token:
             u = 0
+
         if u == 0:
-            arb_bot(
-                BTC,
-                USDT,
-                ETH,
-                btc_price_cex_trimmed,
-                eth_price_cex_trimmed,
-                tolerance,
-                t,
-                cex_count,
-                ema_t_dict,
-            )
+            arb_bot(BTC, USDT, ETH, btc_price_cex_trimmed, eth_price_cex_trimmed, tolerance, t, cex_count, ema_t_dict)
         else:
-            arb_bot(
-                ETH,
-                USDT,
-                BTC,
-                eth_price_cex_trimmed,
-                btc_price_cex_trimmed,
-                tolerance,
-                t,
-                cex_count,
-                ema_t_dict,
-            )
+            arb_bot(ETH, USDT, BTC, eth_price_cex_trimmed, btc_price_cex_trimmed, tolerance, t, cex_count, ema_t_dict)
 
         hodl_value_current = deposit_amount * target_token.price_last
         init_cash = Others.wallet[target_token.name]
 
-        Others.withdraw_volatile(
-            Trinity, target_token, inf, other_token1, other_token2
-        )
-        withdraw_amount = (
-            Others.wallet[target_token.name] - init_cash
-        )
-
-        Others.deposit(
-            Trinity, target_token, withdraw_amount, other_token1, other_token2
-        )
+        Others.withdraw_volatile(Trinity, target_token, inf, other_token1, other_token2)
+        withdraw_amount = Others.wallet[target_token.name] - init_cash
+        Others.deposit(Trinity, target_token, withdraw_amount, other_token1, other_token2)
 
         withdraw_amount_current = withdraw_amount * target_token.price_last
         impermanent_loss_current = withdraw_amount_current - hodl_value_current
+
+        usdt_price = 1.0
+
+# Calculate IL as percentage relative to LP value (withdraw_amount_current)
+        il_percent_usdt = (impermanent_loss_current / withdraw_amount_current) * 100
+
+        # Optionally track absolute token amount loss
+        il_tokens_usdt = impermanent_loss_current / usdt_price
+
+        # Store percent IL in the list instead of raw ratio
+        impermanent_loss_usdt.append(il_percent_usdt)
+        il_btc = impermanent_loss_current / btc_price_cex_trimmed[t]
+        il_eth = impermanent_loss_current / eth_price_cex_trimmed[t]
+
+        impermanent_loss_btc.append(il_btc)
+        impermanent_loss_eth.append(il_eth)
+
         impermanent_loss_percent_current = (
             impermanent_loss_current / withdraw_amount_current * 100
         )
 
         k_btc = btc_price_cex_trimmed[t] / btc_price_cex_trimmed[0]
         k_eth = eth_price_cex_trimmed[t] / eth_price_cex_trimmed[0]
-        if single_token == True:
+        if single_token:
             k_eth = 0
-        k = np.maximum(k_btc, k_eth)
-        uniswapv2_impermanent_loss_percent_current = (
-            2 * np.sqrt(k) / (1 + k) - 1
-        ) * 100
+        k = max(k_btc, k_eth)
+        uni_il = (2 * np.sqrt(k) / (1 + k) - 1) * 100
 
-        uniswapv2_impermanent_loss_percent.append(
-            uniswapv2_impermanent_loss_percent_current
-        )
+        uniswapv2_impermanent_loss_percent.append(uni_il)
         hodl_value.append(hodl_value_current)
         lp_value.append(withdraw_amount_current)
         impermanent_loss.append(impermanent_loss_current)
         impermanent_loss_percent.append(impermanent_loss_percent_current)
         cex_count += 1
-        print(f"Cex count is {cex_count}/{len(btc_price_cex_trimmed)}")
-
+        print(cex_count)
         btc_amm_hourly.append(BTC.price_last)
         eth_amm_hourly.append(ETH.price_last)
         btc_oracle_hourly.append(BTC.price_oracle)
@@ -444,24 +420,30 @@ def historic_arbs_new(
         eth_scale_hourly.append(ETH.price_scale)
         eth_scale_new_hourly.append(ETH.price_scale_new)
         r_star_repeg.append(trinity.equilCovRatio_repeg(BTC, ETH, USDT))
+
         btc_fee_rate.append(BTC.h_rate_records[-1])
-        btc_cov_ratio.append(BTC.cov_ratio())
         eth_fee_rate.append(ETH.h_rate_records[-1])
-        eth_cov_ratio.append(ETH.cov_ratio())
         usdt_fee_rate.append(USDT.h_rate_records[-1])
+        btc_cov_ratio.append(BTC.cov_ratio())
+        eth_cov_ratio.append(ETH.cov_ratio())
         usdt_cov_ratio.append(USDT.cov_ratio())
         btc_sigma.append(BTC.sigma_T_records[-1])
         btc_utilization.append(BTC.utilization_T_records[-1])
 
-        # Slippage calculations as % difference from CEX prices
         btc_slip = abs(BTC.price_last - btc_price_cex_trimmed[t]) / btc_price_cex_trimmed[t] * 100
         eth_slip = abs(ETH.price_last - eth_price_cex_trimmed[t]) / eth_price_cex_trimmed[t] * 100
-        usdt_slip = abs(USDT.price_last - 1.0) * 100  # Assuming USDT peg is 1 USD
+        usdt_slip = abs(USDT.price_last - usdt_price) / usdt_price * 100
 
         btc_slippage_hourly.append(btc_slip)
         eth_slippage_hourly.append(eth_slip)
         usdt_slippage_hourly.append(usdt_slip)
 
+    btc_apy = BTC.hf_lp_records / btc_initial_liability
+    eth_apy = ETH.hf_lp_records / eth_initial_liability
+    usdt_apy = USDT.hf_lp_records / usdt_initial_liability
+
+    total_ema = sum([sum(v) for v in ema_t_dict.values()])
+    average_aggregated_value = total_ema / len(ema_t_dict)
     return (
         hodl_value,
         lp_value,
@@ -492,38 +474,95 @@ def historic_arbs_new(
         btc_slippage_hourly,
         eth_slippage_hourly,
         usdt_slippage_hourly,
+        impermanent_loss_btc,
+        impermanent_loss_eth,
+        impermanent_loss_usdt,
+        btc_apy,
+        eth_apy,
+        usdt_apy,
+        average_aggregated_value
     )
+    # return {
+    #     "hodl_value": hodl_value,
+    #     "lp_value": lp_value,
+    #     "impermanent_loss": impermanent_loss,
+    #     "impermanent_loss_percent": impermanent_loss_percent,
+    #     "uniswapv2_impermanent_loss_percent": uniswapv2_impermanent_loss_percent,
+    #     "deposit_amount": deposit_amount,
+    #     "btc_price_cex_trimmed": btc_price_cex_trimmed,
+    #     "eth_price_cex_trimmed": eth_price_cex_trimmed,
+    #     "btc_amm_hourly": btc_amm_hourly,
+    #     "eth_amm_hourly": eth_amm_hourly,
+    #     "btc_oracle_hourly": btc_oracle_hourly,
+    #     "btc_scale_hourly": btc_scale_hourly,
+    #     "btc_scale_new_hourly": btc_scale_new_hourly,
+    #     "eth_oracle_hourly": eth_oracle_hourly,
+    #     "eth_scale_hourly": eth_scale_hourly,
+    #     "eth_scale_new_hourly": eth_scale_new_hourly,
+    #     "r_star_repeg": r_star_repeg,
+    #     "ema_t_dict": ema_t_dict,
+    #     "btc_fee_rate": btc_fee_rate,
+    #     "btc_cov_ratio": btc_cov_ratio,
+    #     "eth_fee_rate": eth_fee_rate,
+    #     "eth_cov_ratio": eth_cov_ratio,
+    #     "usdt_fee_rate": usdt_fee_rate,
+    #     "usdt_cov_ratio": usdt_cov_ratio,
+    #     "btc_sigma": btc_sigma,
+    #     "btc_utilization": btc_utilization,
+    #     "btc_slippage_hourly": btc_slippage_hourly,
+    #     "eth_slippage_hourly": eth_slippage_hourly,
+    #     "usdt_slippage_hourly": usdt_slippage_hourly,
+    #     "impermanent_loss_btc": impermanent_loss_btc,
+    #     "impermanent_loss_eth": impermanent_loss_eth,
+    #     "impermanent_loss_usdt": impermanent_loss_usdt,
+    #     "btc_apy": btc_apy,
+    #     "eth_apy": eth_apy,
+    #     "usdt_apy": usdt_apy,
+    #     "average_aggregated_value": average_aggregated_value
+    # }
+
+
 
 
 
 # Run the function
 (
-    hodl_value,
-    lp_value,
-    impermanent_loss,
-    impermanent_loss_percent,
-    uniswapv2_impermanent_loss_percent,
-    deposit_amount,
-    btc_price_cex_trimmed,
-    eth_price_cex_trimmed,
-    btc_amm_hourly,
-    eth_amm_hourly,
-    btc_oracle_hourly,
-    btc_scale_hourly,
-    btc_scale_new_hourly,
-    eth_oracle_hourly,
-    eth_scale_hourly,
-    eth_scale_new_hourly,
-    r_star_repeg,
-    ema_t_dict,
-    btc_fee_rate,
-    btc_cov_ratio,
-    eth_fee_rate,
-    eth_cov_ratio,
-    usdt_fee_rate,
-    usdt_cov_ratio,
-    btc_sigma,
-    btc_utilization,
+ hodl_value,
+        lp_value,
+        impermanent_loss,
+        impermanent_loss_percent,
+        uniswapv2_impermanent_loss_percent,
+        deposit_amount,
+        btc_price_cex_trimmed,
+        eth_price_cex_trimmed,
+        btc_amm_hourly,
+        eth_amm_hourly,
+        btc_oracle_hourly,
+        btc_scale_hourly,
+        btc_scale_new_hourly,
+        eth_oracle_hourly,
+        eth_scale_hourly,
+        eth_scale_new_hourly,
+        r_star_repeg,
+        ema_t_dict,
+        btc_fee_rate,
+        btc_cov_ratio,
+        eth_fee_rate,
+        eth_cov_ratio,
+        usdt_fee_rate,
+        usdt_cov_ratio,
+        btc_sigma,
+        btc_utilization,
+        btc_slippage_hourly,
+        eth_slippage_hourly,
+        usdt_slippage_hourly,
+        impermanent_loss_btc,
+        impermanent_loss_eth,
+        impermanent_loss_usdt,
+        btc_apy,
+        eth_apy,
+        usdt_apy,
+        average_aggregated_value
 ) = historic_arbs_new(USDT, BTC, ETH, btc_price_cex, eth_price_cex)
 
 # State observations
@@ -559,9 +598,9 @@ print(f"ETH APY = {ETH.hf_lp_records/ETH.liability * Multiplier}")
 print(f"USDT APY = {USDT.hf_lp_records/USDT.liability * Multiplier}")
 
 # Fee APY
-btc_apy = BTC.hf_lp_records / BTC.liability
-eth_apy = ETH.hf_lp_records / ETH.liability
-usdt_apy = USDT.hf_lp_records / USDT.liability
+# btc_apy = BTC.hf_lp_records / BTC.liability
+# eth_apy = ETH.hf_lp_records / ETH.liability
+# usdt_apy = USDT.hf_lp_records / USDT.liability
 
 
 # Finding the average ema
@@ -623,6 +662,16 @@ output = {
         "BTC": btc_cov_ratio,
         "ETH": eth_cov_ratio,
         "USDT": usdt_cov_ratio,
+    },
+    "slippage": {
+        "BTC":btc_slippage_hourly,
+        "ETH": eth_slippage_hourly,
+        "USDT": usdt_slippage_hourly,
+    },
+    "impermanent_loss_percent": {
+        "BTC": impermanent_loss_btc,
+        "ETH": impermanent_loss_eth, 
+        "USDT":impermanent_loss_usdt,
     },
     "operation_counter": trinity.operation_counters,
     "repeg_count": trinity.operation_counters.get("repeg", 0),
